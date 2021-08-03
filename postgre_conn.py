@@ -41,7 +41,7 @@ joined['sessions_date_time']=session_date_time_list
 from sqlalchemy import create_engine
 
 #выгрузка
-engine = create_engine('postgresql://postgres:1@localhost/data', echo=False)
+engine = create_engine('postgresql://postgres:1@localhost/ayrat', echo=False)
 
 joined.to_sql('joined', con=engine)
 
