@@ -35,6 +35,16 @@ joined=communications.merge(sessions,how='left',on='visitor_id').drop_duplicates
 joined['row_n']=row_n_list
 joined['sessions_date_time']=session_date_time_list
 
+
+
+"""выгрзука в таблицу"""
+from sqlalchemy import create_engine
+
+#выгрузка
+engine = create_engine('postgresql://airat_karimov:GTQrJAxCCkAr@analytics.maximum-auto.ru/data', echo=False)
+
+joined.to_sql('joined', con=engine)
+
 sql_script="""
 
 create table from_py_sql as
