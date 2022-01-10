@@ -1,0 +1,169 @@
+import vc_swap as vc
+import os
+import pandas as pd
+import sys
+import numpy as np
+import re
+import logging
+
+
+os.chdir(r'C:\Temp\coverage_test')
+
+logging.basicConfig(filename=r'logging.txt',
+                    level=logging.INFO, format=' %(asctime)s - %(levelname)s - %(message)s')
+# 800 - 5 , 1800 - 15, 2100 - 15, 2600 - 10
+bands = {
+    6413: [6413, 1301, 525, 3300],
+    1301: [1301, 525],
+    525: [1301, 525],
+    3300: [1301, 525, 3300, 1275],
+    1275: [3300,1275]
+        }
+
+#   198449668 ECI = 256 * eNB ID + Cell ID (Sector ID)
+# cells = [7715745] #   198449668 ECI = 256 * eNB ID + Cell ID (Sector ID)
+# cells = [5022456] #   128574726 ECI = 256 * eNB ID + Cell ID (Sector ID)
+
+# список сот по которым будем делать расчет
+cells = [2324419,2325348,2320878,2332045,2323048,2310077,2350455,2350456,2310277,2332146,2370397,2310778,2332295,2332085,2310089,2325825,2325826,2369147,2310219,2332125,2332126,2325735,2393048,2370379,2309318,2332316,2341509,2325566,2320988,2350104,2310059,2346808,2346809,2393017,2393019,2310447,2310727,2310729,2323108,2320748,2310197,2320208,2363607,2341769,2310738,2325465,2325764,2325766,2363617,2332066,2325994,2320848,2320849,2323059,2310799,2332305,2320137,2325964,2325965,2320868,2320869,2313759,2320150,2310278,2310508,2332106,2311869,2332294,2320147,2310087,2369149,2310598,2310599,2310029,2310658,2310067,2325734,2325544,2325565,2320987,2323017,2310057,2332784,2332785,2346789,2310448,2332725,2350116,2323109,2325554,2341718,2332524,2332216,2320307,2325956,2310737,2369287,2310677,2325594,2325596,2363619,2341607,2341608,2370389,2325614,2325615,2310269,2323057,2325636,2320132,2320133,2332044,2332076,2350454,2320158,2310279,2325936,2310247,2310248,2310249,2311868,2320148,2310829,2341708,2325586,2310027,2332025,2332026,2325836,230009201,2310068,2325736,2310318,2320897,2325564,2393028,2393108,2325686,2310058,2369137,2369138,2310807,2310809,2370277,2325556,2320749,2341717,2341547,2325494,2393038,2311928,2332214,2320309,2310367,2310369,2310679,2332065,2325995,2325996,2393088,2350144,2310798,2324417,2306947,2320138,2320867,2332075,2309049,2310507,2341597,2341598,2393009,2310358,2310359,2332206,2393099,2310069,2393047,2332314,2341508,2325545,2320898,2393029,2393109,2325684,2369139,2346787,2346807,2332726,2310198,2341548,2320207,2332415,2369467,2393039,2332525,2310527,2310528,2325904,2310907,2363608,2363609,2325358,2325359,2325955,2310368,2363597,2320847,2325664,2325666,2320227,2310797,2332306,2306948,2325966,2313757,2313758,2323047,2332074,2320157,2309048,2393079,2310357,2332296,2369148,2332204,2332205,2310028,2310049,2310659,2325504,2325506,2300829,2341507,2320777,2320738,2332034,2323019,2370278,2325806,2332724,2323107,2332416,2310418,2369468,2325906,2325605,2320568,2363588,2369127,2369288,2310678,2363599,2363618,2341609,2325634,2324418,2320131,2310078,2320647,2320997,2325934,2332145,2320149,2310088,2311969,2325585,2310047,2310048,2346837,2332614,230009203,2310497,2310498,2393049,2309317,2332315,2300827,2300828,2320778,2320737,2332035,2323018,2311998,2370279,2310389,2320747,2341719,2390384,2332414,2325496,2393037,2325905,2310908,2325606,2311929,2341767,2341768,2320308,2325954,2325464,2325595,2363598,2310267,2310268,2350145,2325347,2325349,2306949,2320877,2332046,2310079,2320648,2320649,2320999,2320156,2309047,2341599,2332144,2370398,2332245,2310777,2311867,2332086,2325476,2311967,2341707,2341709,2310218,2332124,2332024,2346839,2350134,2350135,2310617,2310618,2310619,2370377,2370378,2310317,2309319,2320739,2332036,2320989,2350106,2310808,2332196,2332195,2325804,2325805,2310449,2310728,2310387,2310388,2320209,2310419,2369469,2311927,2325357,2320567,2320569,2310739,2363587,2332064,2370388,2325616,2393089,2325635,2320228,2350146,2332304,2320879,2323049,2320998,2320159,2325935,2310509,2370399,2332104,2332105,2393007,2393008,2393077,2332244,2332246,2310779,2332084,2310828,2325474,2325475,2311968,2310597,2393097,2393098,2325834,2325835,2346838,2350136,2310657,2332615,2332616,230009202,2325505,2310319,2320779,2393107,2350105,2325685,2332786,2346788,2311997,2332194,2350114,2350115,2325555,2341549,2310417,2325495,2332526,2310529,2310909,2325604,2332215,2369128,2325765,2369289,2370387,2310957,2310958,2310959,2325665,2393087,2320229]
+file_date_1 = 'logos4g_cl-23-01_20210528_20210915113935_4G_ATOLL_EXPORT_25x25_v05_mrgps.csv'
+file_date_2 = 'logos4g_cl-23-01_20210803_20210915114232_4G_ATOLL_EXPORT_25x25_v05_mrgps.csv'
+rsrp_limit_1 = -95      # уровень при котором не считаем покрытие потерянным
+rsrp_delta_1 = 3        # дельта при которой считаем покрытие не потеряно
+rsrp_limit_2 = -95     # уровень при котором не считаем покрытие не улучшено
+rsrp_delta_2 = 3        # дельта при которой считаем покрытие не улучшено
+
+# определяем названия столбцов lat lon так как они меняются из-за бинов
+date_1_data = pd.read_csv(file_date_1)
+for col in date_1_data.columns:
+    if re.search('LONGITUDE_\d\d', col):
+        longitude = col
+    elif re.search('LATITUDE_\d\d', col):
+        latitude = col
+
+
+def coverage_check_for_cluster():
+    """"Эта функция считает покрытие с учетом сторонних band-ов"""
+    for cell in cells:
+        current_band = 0
+        # преобразовываем список сот в формат Geos
+        cell_id_geos = (int(str(cell)[:-1]) * 256 + int(str(cell)[-1]))
+        # берем координаты точек для первого дня для нашей соты
+        date_1_data = pd.read_csv(file_date_1,
+                                  usecols=['CELLID_PCELL', 'RSRP_PCELL', 'CARRIER_FREQ', longitude, latitude],
+                                  low_memory=False)
+        date_1_data_cell = date_1_data[(date_1_data.CELLID_PCELL == cell_id_geos)]
+        # определяем частоту нашей соты
+        try:
+            current_band = int(date_1_data_cell['CARRIER_FREQ'].loc[date_1_data_cell.index.tolist()[0]])
+        except (IndexError, ValueError):
+            continue
+        print(cell)
+        # print(date_1_data_cell.info())
+        date_1_data_cell = date_1_data_cell[['CELLID_PCELL', 'RSRP_PCELL', longitude, latitude]]
+
+        # берем коодинаты точек и уровень для второго дня
+        date_2_data = pd.read_csv(file_date_2,
+                                  usecols=['CELLID_PCELL', 'RSRP_PCELL', longitude, latitude],
+                                  low_memory=False)
+        date_2_data_cell = date_2_data[(date_2_data.CELLID_PCELL == cell_id_geos)]
+        # print(date_2_data_cell.head())
+        # print(date_2_data_cell.describe())
+        # date_2_data_cell.to_csv('21.csv')
+        # print('date_2_data_cell:\n')
+        # print(date_2_data_cell.info())
+        # date_2_data_cell
+
+        # объединяем таблицы между собой:
+        dat_1_2 = pd.merge(date_1_data_cell, date_2_data_cell, how="outer", on=['CELLID_PCELL', longitude, latitude])
+        # dat_1_2.to_csv('21+15.csv')
+
+        # формируем таблицу с двумя лучшими уровнями для второго дня исключив нашу соту
+        bs_data = pd.read_csv(file_date_2,
+                              usecols=['CELLID_PCELL', 'RSRP_PCELL', 'CARRIER_FREQ', longitude, latitude],
+                              low_memory=False
+                              )
+        bs_data = bs_data[(bs_data.CARRIER_FREQ != '\\N')]
+        bs_data.CARRIER_FREQ = bs_data.CARRIER_FREQ.astype(int)
+        bs_data_wo_our_cell_with_band = bs_data[(bs_data.CELLID_PCELL != cell_id_geos)]
+        # for index, row in bs_data_wo_our_cell_with_band.iterrows():
+        #     text = str(row['CELLID_PCELL']) + ' ' + str(row['CARRIER_FREQ']) + ' ' + str(type(row['CARRIER_FREQ']))
+        #     vc.text_to_file('123test.txt', text)
+        # sys.exit()
+        # bs_data_wo_our_cell_with_band.to_csv('big.csv')
+
+        # оставляем только нужные нам band-ы
+        bs_data_wo_our_cell = bs_data_wo_our_cell_with_band.loc[bs_data_wo_our_cell_with_band['CARRIER_FREQ'] != '\\N']
+        bs_data_wo_our_cell = bs_data_wo_our_cell_with_band[bs_data_wo_our_cell_with_band['CARRIER_FREQ'].isin(bands[current_band])]
+        # print(len(bs_data_wo_our_cell))
+        # bs_data_wo_our_cell.to_csv('little.csv')
+        # удаляем две колонки
+        bs_data_wo_our_cell = bs_data_wo_our_cell.drop(columns=['CELLID_PCELL', 'CARRIER_FREQ'])
+        # print(bs_data_wo_our_cell.info())
+
+        # оставляем максимальное значения уровня две колонки
+        bs_data_wo_our_cell = bs_data_wo_our_cell.groupby([longitude, latitude]).max()
+
+        # формируем результирующую таблицу
+        date_1_2_bs = pd.merge(dat_1_2, bs_data_wo_our_cell, how='left', on=[longitude, latitude])
+        date_1_2_bs = date_1_2_bs.rename(columns={'RSRP_PCELL_x': 'RSRP_Day_1', 'RSRP_PCELL_y': 'RSRP_Day_2','RSRP_PCELL': 'RSRP_BS_Another_cell'})
+        date_1_2_bs = date_1_2_bs[['CELLID_PCELL', longitude, latitude, 'RSRP_Day_1', 'RSRP_Day_2', 'RSRP_BS_Another_cell']]
+        # date_1_2_bs.to_csv('res.csv')
+
+        # create a list of our conditions
+        # conditions1 - это условия без учета rsrp_limit rsrp_delta
+        conditions1 = [
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_Day_2']) & (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_BS_Another_cell']),
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_BS_Another_cell']) & (date_1_2_bs['RSRP_BS_Another_cell'] > date_1_2_bs['RSRP_Day_2']),
+            (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_Day_1']) & (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_BS_Another_cell']),
+            (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_BS_Another_cell']) & (date_1_2_bs['RSRP_BS_Another_cell'] > date_1_2_bs['RSRP_Day_1']),
+            (date_1_2_bs['RSRP_Day_1'].isnull()) & (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_BS_Another_cell']),
+            (date_1_2_bs['RSRP_Day_1'].isnull()) & (date_1_2_bs['RSRP_Day_2'].notnull()) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()),
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_BS_Another_cell']) & (date_1_2_bs['RSRP_Day_2'].isnull()),
+            (date_1_2_bs['RSRP_Day_1'].notnull()) & (date_1_2_bs['RSRP_Day_2'].isnull()) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()),
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_Day_2']) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()),
+            (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_Day_1']) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()),
+            ]
+        # conditions2 - это условия c учетом rsrp_limit rsrp_delta
+        conditions2 = [
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_Day_2'] + rsrp_delta_1) & (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_BS_Another_cell']) & (date_1_2_bs['RSRP_Day_2'] < rsrp_limit_1),
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_BS_Another_cell'] + rsrp_delta_1) & (date_1_2_bs['RSRP_BS_Another_cell'] > date_1_2_bs['RSRP_Day_2']) & (date_1_2_bs['RSRP_BS_Another_cell'] < rsrp_limit_1),
+            (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_Day_1'] + rsrp_delta_2) & (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_BS_Another_cell']) & (date_1_2_bs['RSRP_Day_1'] < rsrp_limit_2),
+            (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_BS_Another_cell'] + rsrp_delta_2) & (date_1_2_bs['RSRP_BS_Another_cell'] > date_1_2_bs['RSRP_Day_1'])& (date_1_2_bs['RSRP_BS_Another_cell'] < rsrp_limit_2),
+            (date_1_2_bs['RSRP_Day_1'].isnull()) & (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_BS_Another_cell'] + rsrp_delta_2)& (date_1_2_bs['RSRP_BS_Another_cell'] < rsrp_limit_2),
+            (date_1_2_bs['RSRP_Day_1'].isnull()) & (date_1_2_bs['RSRP_Day_2'].notnull()) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()),
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_BS_Another_cell'] + rsrp_delta_1) & (date_1_2_bs['RSRP_Day_2'].isnull()) & (date_1_2_bs['RSRP_BS_Another_cell'] < rsrp_limit_1),
+            (date_1_2_bs['RSRP_Day_1'].notnull()) & (date_1_2_bs['RSRP_Day_2'].isnull()) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()),
+            (date_1_2_bs['RSRP_Day_1'] > date_1_2_bs['RSRP_Day_2'] + rsrp_delta_1) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull()) & (date_1_2_bs['RSRP_Day_2'] < rsrp_limit_1),
+            (date_1_2_bs['RSRP_Day_2'] > date_1_2_bs['RSRP_Day_1'] + rsrp_delta_2) & (date_1_2_bs['RSRP_BS_Another_cell'].isnull())& (date_1_2_bs['RSRP_Day_1'] < rsrp_limit_2),
+            ]
+
+        # create a list of the values we want to assign for each condition
+        values = [-1, -1, 1, 1, 1, 1, -1, -1, -1, 1]
+
+        # create a new column and use np.select to assign values to it using our lists as arguments
+        date_1_2_bs['Coverage_Status_Cond1'] = np.select(conditions1, values)
+        date_1_2_bs['Coverage_Status_Cond2'] = np.select(conditions2, values)
+
+        # экспортим результирующую таблицу
+        # date_1_2_bs.to_csv(str(cell) + '.csv')
+        Coverage_Status_1 = date_1_2_bs['Coverage_Status_Cond1'].sum()
+        points_nbr_1 = date_1_2_bs['Coverage_Status_Cond1'].count()
+        coverage_koef_1 = round(
+            100 * date_1_2_bs['Coverage_Status_Cond1'].sum() / date_1_2_bs['Coverage_Status_Cond1'].count(), 1)
+        Coverage_Status_2 = date_1_2_bs['Coverage_Status_Cond2'].sum()
+        points_nbr_2 = date_1_2_bs['Coverage_Status_Cond2'].count()
+        coverage_koef_2 = round(
+            100 * date_1_2_bs['Coverage_Status_Cond2'].sum() / date_1_2_bs['Coverage_Status_Cond2'].count(), 1)
+        logging.info('{0}\t{1}\t{2}\t{3}\t{4}\t{5}\t{6}'.format(cell,
+                                                                Coverage_Status_1,
+                                                                points_nbr_1,
+                                                                coverage_koef_1,
+                                                                Coverage_Status_2,
+                                                                points_nbr_2,
+                                                                coverage_koef_2))
+        # sys.exit()
+
+
+
+coverage_check_for_cluster()
