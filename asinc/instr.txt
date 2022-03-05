@@ -1,0 +1,11 @@
+from select import select
+select - выдает объекты из трех принятых списков,
+         r,w,e   -  r ожидает очереди на чтение,
+                    w ожидает очереди на запись,
+                    е  на ошибки
+import selectors - более абстрактная логика над select, используется для регистрации событий
+         selectors.register(fileobj=<сокет>, events=<события>,data=<данные>)-для регистрации
+         selectors.uregister(<сокет>)-для разрегистрации
+         selectors.selectors.select() #(key,events)- по одному каржету за каждый зарегистрированный объект
+
+
